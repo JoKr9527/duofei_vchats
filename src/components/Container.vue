@@ -28,7 +28,7 @@
           <meet-room-opt v-show="this.$store.state.box === 'manytomany'" :isCreator="isCreator" @joinMeetRoomEvent="joinMeetRoomEvent" @quitMeetRoomEvent="quitMeetRoomEvent" @closeMeetRoomEvent="closeMeetRoomEvent"></meet-room-opt>
         </span>
       </el-header>
-      <el-main style="margin:30px;width: 100%;height: 100%;">
+      <el-main style="width: 100%;height: 100%;">
         <div id="video_box" style="border-color: rgb(201, 186, 131)">
           <one-to-one-box-container ref="oneToOneBox" v-show="this.$store.state.box === 'onetoone' && hasMembers" @recHangup="recHangup">
           </one-to-one-box-container>
@@ -332,13 +332,19 @@ export default {
       this.$refs.manyToManyBox.createWebRtcPeerSendonly(msg)
     },
     // 点击退出会议室时，触发的事件
-    quitMeetRoomEvent () {},
+    quitMeetRoomEvent () {
+      this.$store.commit('setCalling', false)
+      this.$refs.manyToManyBox.quitMeetRoomRun()
+    },
     // 点击关闭会议室时，触发的事件
-    closeMeetRoomEvent () {}
+    closeMeetRoomEvent () {
+      this.$store.commit('setCalling', false)
+      this.$refs.manyToManyBox.closeMeetRoomRun()
+    }
   },
   mounted () {
     const self = this
-    const url = 'wss://192.168.3.72:8081/v-charts/chat?userName=' + this.username
+    const url = 'wss://192.168.3.18:8081/v-charts/chat?userName=' + this.username
     // 建立websocket连接
     this.$store.commit('createCon', url)
     this.$store.commit('conOpen', () => {

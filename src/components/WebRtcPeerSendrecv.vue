@@ -5,6 +5,7 @@
 <script>
 export default {
   name: 'WebRtcPeerSendrecv',
+  props: ['name'],
   data: function () {
     const webRtcPeer = null
     return {
@@ -122,6 +123,25 @@ export default {
           })
         })
     },
+    createWebRtcPeerRecvonlyByOptions: function (msg, options) {
+      console.log('createWebRtcPeer')
+      const self = this
+      this.webRtcPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(options,
+        function (error) {
+          if (error) {
+            return console.error(error)
+          }
+          self.webRtcPeer.generateOffer((error, offerSdp) => {
+            if (error) {
+              console.log(error)
+              return console.error('Error generating the offer')
+            }
+            console.log('Invoking SDP offer callback function')
+            msg.content = offerSdp
+            self.$store.commit('sendMsg', JSON.stringify(msg))
+          })
+        })
+    },
     disposeWebRtc: function () {
       if (this.webRtcPeer !== null) {
         console.log('销毁webrtc')
@@ -133,7 +153,7 @@ export default {
     const self = this
     // 用户接收到iceCandidate消息
     this.$store.commit('addHandler', {
-      id: 'iceCandidate',
+      id: 'iceCandidate' + self.name,
       handler: (msg) => {
         if (self.webRtcPeer !== null) {
           self.webRtcPeer.addIceCandidate(msg.content, error => {
@@ -144,7 +164,7 @@ export default {
     })
     // 用户接收到 sdp answer
     this.$store.commit('addHandler', {
-      id: 'sdpAnswer',
+      id: 'sdpAnswer' + self.name,
       handler: (msg) => {
         if (self.webRtcPeer !== null) {
           self.webRtcPeer.processAnswer(msg.content, function (error) {
