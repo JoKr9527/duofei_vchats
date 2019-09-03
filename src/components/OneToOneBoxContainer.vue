@@ -1,8 +1,8 @@
 <template>
-  <div>
+  <div  v-if="this.$store.state.box === 'onetoone'">
     <video v-bind:key = "n" v-for="n in number" ref="videos" autoplay width="240px" height="180px"
            poster=""></video>
-    <web-rtc-peer-sendrecv ref="webRtc" @recHangup="recHangup"></web-rtc-peer-sendrecv>
+    <web-rtc-peer-sendrecv ref="oneToOneWebRtc" @recHangup="recHangup" :name="this.$store.state.username"></web-rtc-peer-sendrecv>
   </div>
 </template>
 
@@ -24,21 +24,19 @@ export default {
     }
   },
   computed: {
-    getMember: function () {
-      return this.$store.state.members[0]
-    }
   },
   methods: {
     // 创建webrtc
-    createWebRtcPeerSendonly (message) {
+    createWebRtcPeerSendRecv (message) {
       this.localVideo = this.$refs.videos[0]
       this.remoteVideo = this.$refs.videos[1]
-      this.$refs.webRtc.createWebRtcPeer(this.localVideo, this.remoteVideo, message)
+      this.$refs.oneToOneWebRtc.createWebRtcPeer(this.localVideo, this.remoteVideo, message)
     },
     disposeWebRtc () {
-      this.$refs.webRtc.disposeWebRtc()
+      this.$refs.oneToOneWebRtc.disposeWebRtc()
     },
     recHangup (content) {
+      console.log('rechangup!')
       this.$emit('recHangup', content)
     }
   },

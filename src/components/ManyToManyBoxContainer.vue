@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <el-row>
+  <div v-if="this.$store.state.box === 'manytomany'">
+    <el-row v-if="this.$store.state.box === 'manytomany'">
       <el-col :span="10">
         <video ref="localVideo" autoplay
                poster="" style="display: inline"></video>

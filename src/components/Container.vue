@@ -178,7 +178,9 @@ export default {
         this.$store.commit('sendMsg', JSON.stringify(msg))
         // 初始化内容
         this.$store.commit('setCalling', true)
+        this.$store.commit('clearMembers')
         this.$store.commit('addMember', to)
+        this.$store.commit('setScopeId', '')
         this.$store.commit('setBox', 'onetoone')
         this.callProcess.calledUsername = to
         // 建立onetoone连接
@@ -190,7 +192,7 @@ export default {
           messageProcessMode: 'sdp_onetoone',
           messageType: 'user'
         }
-        this.$refs.oneToOneBox.createWebRtcPeerSendonly(message)
+        this.$refs.oneToOneBox.createWebRtcPeerSendRecv(message)
       }).catch(action => {
         this.$message({
           type: 'info',
@@ -243,6 +245,7 @@ export default {
     },
     // 收到挂断请求
     recHangup (content) {
+      console.log('收到挂断请求')
       this.msgHint('error', content)
       this.init()
     },
@@ -408,7 +411,7 @@ export default {
           messageProcessMode: 'sdp_onetoone',
           messageType: 'user'
         }
-        self.$refs.oneToOneBox.createWebRtcPeerSendonly(message)
+        self.$refs.oneToOneBox.createWebRtcPeerSendRecv(message)
         self.$store.commit('setScopeId', msg.content)
         self.$store.commit('setCalling', true)
       }

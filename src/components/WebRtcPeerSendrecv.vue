@@ -156,6 +156,7 @@ export default {
       id: 'iceCandidate' + self.name,
       handler: (msg) => {
         if (self.webRtcPeer !== null) {
+          console.log('处理接收到iceCandidate 消息')
           self.webRtcPeer.addIceCandidate(msg.content, error => {
             if (error) { return console.error('Error adding candidate: ' + error) }
           })
@@ -167,6 +168,7 @@ export default {
       id: 'sdpAnswer' + self.name,
       handler: (msg) => {
         if (self.webRtcPeer !== null) {
+          console.log('处理接收到的sdpanswer 消息')
           self.webRtcPeer.processAnswer(msg.content, function (error) {
             if (error) {
               return console.error(error)
@@ -175,6 +177,8 @@ export default {
         }
       }
     })
+    console.log('我执行了')
+    console.log(this.$store.state.msgDispatch)
     // 用户收到挂断通知，销毁webrtc
     // 注入接收到的hangup 消息处理器
     this.$store.commit('addHandler', {

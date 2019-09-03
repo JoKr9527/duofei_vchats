@@ -1,8 +1,8 @@
 <template>
-  <div>
+  <div v-if="this.$store.state.box === 'onetomany'">
     <video ref="localVideo" autoplay width="960px" height="720px"
            poster=""></video>
-    <web-rtc-peer-sendrecv ref="webRtcSendOnly"></web-rtc-peer-sendrecv>
+    <web-rtc-peer-sendrecv ref="webRtc" :name="this.$store.state.username" @recCloseBroadcastRoom="recCloseBroadcastRoom"></web-rtc-peer-sendrecv>
   </div>
 </template>
 
@@ -23,7 +23,7 @@ export default {
     // 创建webrtc
     createWebRtcPeerSendonly (message) {
       this.localVideo = this.$refs.localVideo
-      this.$refs.webRtcSendOnly.createWebRtcPeerSendonly(this.localVideo, message)
+      this.$refs.webRtc.createWebRtcPeerSendonly(this.localVideo, message)
     },
     createWebRtcPeerRecvonly (message) {
       this.localVideo = this.$refs.localVideo
