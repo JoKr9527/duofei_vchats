@@ -7,13 +7,13 @@
         <web-rtc-peer-sendrecv ref="webRtcSendOnly" :name="username" style="display: inline"></web-rtc-peer-sendrecv>
       </el-col>
       <el-col :span="14">
-        <el-row>
-          <template  v-for="member in this.$store.state.members" >
-            <el-col :sm="8" v-bind:key="'webrtc'+member">
-              <video :ref="'remote'+member" autoplay width="320px" height="240px"  poster="" style="display: inline"></video>
-              <web-rtc-peer-sendrecv :ref="'webRtcRecvOnly'+member" :name="username + member" style="display: inline"></web-rtc-peer-sendrecv>
-            </el-col>
-          </template>
+        <el-row :gutter="16">
+              <template  v-for="(member) in this.$store.state.members" >
+              <el-col :sm="8" v-bind:key="'webrtc'+member">
+                <video :ref="'remote'+member" autoplay width="320px" height="240px"  poster="" style="display: inline"></video>
+                <web-rtc-peer-sendrecv :ref="'webRtcRecvOnly'+member" :name="username + member" style="display: inline"></web-rtc-peer-sendrecv>
+              </el-col>
+              </template>
         </el-row>
       </el-col>
     </el-row>
