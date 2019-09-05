@@ -1,30 +1,23 @@
 # vchats
 
-> A Vue.js project
+> Vue 实现的视频聊天室客户端
 
 ## Build Setup
 
 ``` bash
-# install dependencies
+# 安装依赖
 npm install
 
-# serve with hot reload at localhost:8080
+# 注意：使用的是 HTTPS 协议
 npm run dev
-
-# build for production with minification
-npm run build
-
-# build for production and view the bundle analyzer report
-npm run build --report
-
-# run unit tests
-npm run unit
-
-# run e2e tests
-npm run e2e
-
-# run all tests
-npm test
 ```
 
-For a detailed explanation on how things work, check out the [guide](http://vuejs-templates.github.io/webpack/) and [docs for vue-loader](http://vuejs.github.io/vue-loader).
+## 结构说明
+
+分了8个自定义组件：
+
+container.vue 是其它组件的父组件，其中 WebRtcPeerSendRecv.vue 是共用组件，UserOpt 和OneToOneBoxContainer 组件用于一对一聊天，BroadcastRoomOpt 和 OneToManyBoxContainer 组件用于一对多聊天，MeetRoomOpt 和 ManyToManyBoxCantainer 组件用于多对多聊天。
+
+<br>
+
+分类的消息处理器均在各自的类别组件中进行注册。通用的消息处理器在 container 中进行注册；总之，要保证接收到服务端消息时，有对应的消息处理器进行处理。
