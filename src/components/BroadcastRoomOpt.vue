@@ -21,10 +21,10 @@ export default {
           id: 'createBroadcastRoom',
           from: this.$store.state.username,
           content: value,
-          messageProcessMode: 'mutual',
-          messageType: 'user'
+          messageType: 'OneToManyMsg'
         }
         this.$store.commit('sendMsg', JSON.stringify(message))
+        this.$store.commit('setCalling', true)
       }).catch(() => {
         this.$message({
           type: 'info',
@@ -34,40 +34,50 @@ export default {
     },
     // 点击加入直播间触发的事件
     joinBroadcastRoom () {
-      this.$emit('joinBroadcastRoomSuccess')
+      const message = {
+        id: 'joinBroadcastRoom',
+        from: this.$store.state.username,
+        to: this.$store.state.scopeId,
+        messageType: 'OneToManyMsg'
+      }
+      this.$store.commit('sendMsg', JSON.stringify(message))
+      this.$store.commit('setCalling', true)
     },
     // 点击关闭直播间触发的事件
     closeBroadcastRoom () {
-      this.$emit('closeBroadcastRoom')
+      // 发送直播间关闭消息
+      const msg = {
+        id: 'closeBroadcastRoom',
+        from: this.$store.state.username,
+        to: this.$store.state.scopeId,
+        content: '当前观看的直播间已关闭',
+        messageType: 'OneToManyMsg'
+      }
+      this.$store.commit('sendMsg', JSON.stringify(msg))
+      console.log('当前直播间已关闭')
+      this.$store.commit('disposeWebRtc', this.$store.state.username)
+      this.$store.commit('setCalling', false)
+      this.$store.commit('setScopeId', '')
+      this.$store.commit('clearMembers')
     },
     // 点击退出直播间触发的事件
     quitBroadcastRoom () {
-      this.$emit('quitBroadcastRoom')
+      // 发送直播间关闭消息
+      const msg = {
+        id: 'quitBroadcastRoom',
+        from: this.$store.state.username,
+        to: this.$store.state.scopeId,
+        content: this.$store.state.username + '退出直播间',
+        messageType: 'OneToManyMsg'
+      }
+      this.$store.commit('sendMsg', JSON.stringify(msg))
+      this.$store.commit('disposeWebRtc', this.$store.state.username)
+      this.$store.commit('setCalling', false)
+      this.$store.commit('setScopeId', '')
+      this.$store.commit('clearMembers')
     }
   },
   mounted () {
-    const self = this
-    // 用户接收到创建直播间响应信息
-    this.$store.commit('addHandler', {
-      id: 'createBroadcastRoomResp',
-      handler: function (msg) {
-        if (msg.type === 'success') {
-          self.$message({
-            type: msg.type,
-            message: '创建直播间成功！'
-          })
-          self.$store.commit('setScopeId', msg.content)
-          self.$store.commit('setCalling', true)
-          // 触发直播间创建成功事件
-          self.$emit('createBroadcastRoomSuccess')
-        } else {
-          self.$message({
-            type: msg.type,
-            message: msg.content
-          })
-        }
-      }
-    })
   }
 }
 </script>

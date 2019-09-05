@@ -21,8 +21,7 @@ export default {
           id: 'createMeetRoom',
           from: this.$store.state.username,
           content: value,
-          messageProcessMode: 'mutual',
-          messageType: 'user'
+          messageType: 'GroupMsg'
         }
         this.$store.commit('sendMsg', JSON.stringify(message))
       }).catch(() => {
@@ -33,19 +32,52 @@ export default {
       })
     },
     joinMeetRoom () {
+      const message = {
+        id: 'joinMeetRoom',
+        from: this.$store.state.username,
+        to: this.$store.state.scopeId,
+        other: this.$store.state.username,
+        messageType: 'GroupMsg'
+      }
+      this.$store.commit('sendMsg', JSON.stringify(message))
       this.$store.commit('setCalling', true)
       this.$store.commit('clearMembers')
-      this.$emit('joinMeetRoomEvent')
+    },
+    disposeAllWebRtc () {
+      // 销毁自身的 webrtc
+      this.$store.commit('disposeWebRtc', this.$store.state.username)
+      // 销毁 members的webrtc
+      this.$store.state.members.forEach((member) => {
+        this.$store.commit('disposeWebRtc', this.$store.state.username + member)
+      })
     },
     quitMeetRoom () {
+      this.disposeAllWebRtc()
+      // 发送退出会议室消息
+      const quitMeetRoomMsg = {
+        id: 'quitMeetRoom',
+        from: this.$store.state.username,
+        to: this.$store.state.scopeId,
+        messageType: 'GroupMsg'
+      }
+      this.$store.commit('sendMsg', JSON.stringify(quitMeetRoomMsg))
+      console.log('退出会议室')
       this.$store.commit('setCalling', false)
       this.$store.commit('clearMembers')
-      this.$emit('quitMeetRoomEvent')
     },
     closeMeetRoom () {
-      this.$store.commit('clearMembers')
+      this.disposeAllWebRtc()
+      // 发送关闭会议室消息
+      const closeMeetRoomMsg = {
+        id: 'closeMeetRoom',
+        from: this.$store.state.username,
+        to: this.$store.state.scopeId,
+        messageType: 'GroupMsg'
+      }
+      this.$store.commit('sendMsg', JSON.stringify(closeMeetRoomMsg))
+      console.log('关闭会议室')
       this.$store.commit('setCalling', false)
-      this.$emit('closeMeetRoomEvent')
+      this.$store.commit('clearMembers')
     }
   },
   mounted () {

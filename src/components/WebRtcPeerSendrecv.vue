@@ -5,7 +5,7 @@
 <script>
 export default {
   name: 'WebRtcPeerSendrecv',
-  props: ['name'],
+  props: ['name', 'poster'],
   data: function () {
     const webRtcPeer = null
     return {
@@ -19,7 +19,7 @@ export default {
         id: 'onIceCandidate',
         from: this.$store.state.username,
         content: candidate,
-        messageType: 'onIceCandidate'
+        messageType: 'SdpMsg'
       }
       const jsonMessage = JSON.stringify(message)
       console.log('Sending onIceCandidate message: ' + jsonMessage)
@@ -29,21 +29,32 @@ export default {
       console.log('发生了一些错误,待做')
     },
     // 创建收发对等点
-    createWebRtcPeer: function (localVideo, remoteVideo, msg) {
+    createWebRtcPeer: function (localVideo, remoteVideo, msg, oncandidategatheringdone) {
+      let video = false
+      console.log(this.$store.state.callingType)
+      if (this.$store.state.callingType === 2 || this.$store.state.callingType === 3) {
+        video = {
+          width: 640,
+          framerate: 15
+        }
+      } else {
+        const img = require('../assets/voice240180.jpg')
+        this.$emit('posterChange', img)
+        console.log(localVideo)
+      }
       const options = {
         localVideo: localVideo,
         remoteVideo: remoteVideo,
         onicecandidate: this.onIceCandidate,
+        oncandidategatheringdone: oncandidategatheringdone,
         onerror: this.onError,
         mediaConstraints: {
-          audio: true,
-          video: {
-            width: 640,
-            framerate: 15
-          }
+          audio: !!((this.$store.state.callingType === 1 || this.$store.state.callingType === 3)),
+          video: video
         }
       }
       console.log('createWebRtcPeer')
+      console.log(options)
       const self = this
       this.webRtcPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerSendrecv(options,
         function (error) {
@@ -60,12 +71,17 @@ export default {
             self.$store.commit('sendMsg', JSON.stringify(msg))
           })
         })
+      this.$store.commit('addWebRtc', {
+        id: msg.other,
+        obj: this.webRtcPeer
+      })
     },
-    createWebRtcPeerSendonly: function (localVideo, msg) {
+    createWebRtcPeerSendonly: function (localVideo, msg, oncandidategatheringdone) {
       const options = {
         localVideo: localVideo,
         onicecandidate: this.onIceCandidate,
         onerror: this.onError,
+        oncandidategatheringdone: oncandidategatheringdone,
         mediaConstraints: {
           audio: true,
           video: {
@@ -91,12 +107,17 @@ export default {
             self.$store.commit('sendMsg', JSON.stringify(msg))
           })
         })
+      this.$store.commit('addWebRtc', {
+        id: msg.other,
+        obj: this.webRtcPeer
+      })
     },
-    createWebRtcPeerRecvonly: function (remoteVideo, msg) {
+    createWebRtcPeerRecvonly: function (remoteVideo, msg, oncandidategatheringdone) {
       const options = {
         remoteVideo: remoteVideo,
         onicecandidate: this.onIceCandidate,
         onerror: this.onError,
+        oncandidategatheringdone: oncandidategatheringdone,
         mediaConstraints: {
           audio: true,
           video: {
@@ -122,10 +143,38 @@ export default {
             self.$store.commit('sendMsg', JSON.stringify(msg))
           })
         })
+      this.$store.commit('addWebRtc', {
+        id: msg.other,
+        obj: this.webRtcPeer
+      })
     },
-    createWebRtcPeerRecvonlyByOptions: function (msg, options) {
-      console.log('createWebRtcPeer')
+    createWebRtcPeerRecvonlyBySpecialIcecandidateCallback: function (remoteVideo, msg, oncandidategatheringdone) {
       const self = this
+      const options = {
+        remoteVideo: remoteVideo,
+        onicecandidate: function (candidate) {
+          console.log('Local candidate' + JSON.stringify(candidate))
+          const message = {
+            id: 'onIceCandidate',
+            from: msg.other,
+            content: candidate,
+            messageType: 'SdpMsg'
+          }
+          const jsonMessage = JSON.stringify(message)
+          console.log('Sending onIceCandidate message: ' + jsonMessage)
+          self.$store.commit('sendMsg', jsonMessage)
+        },
+        onerror: this.onError,
+        oncandidategatheringdone: oncandidategatheringdone,
+        mediaConstraints: {
+          audio: true,
+          video: {
+            width: 640,
+            framerate: 45
+          }
+        }
+      }
+      console.log('createWebRtcPeer')
       this.webRtcPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(options,
         function (error) {
           if (error) {
@@ -141,6 +190,10 @@ export default {
             self.$store.commit('sendMsg', JSON.stringify(msg))
           })
         })
+      this.$store.commit('addWebRtc', {
+        id: msg.other,
+        obj: this.webRtcPeer
+      })
     },
     disposeWebRtc: function () {
       if (this.webRtcPeer !== null) {
@@ -150,59 +203,6 @@ export default {
     }
   },
   mounted () {
-    const self = this
-    // 用户接收到iceCandidate消息
-    this.$store.commit('addHandler', {
-      id: 'iceCandidate' + self.name,
-      handler: (msg) => {
-        if (self.webRtcPeer !== null) {
-          console.log('处理接收到iceCandidate 消息')
-          self.webRtcPeer.addIceCandidate(msg.content, error => {
-            if (error) { return console.error('Error adding candidate: ' + error) }
-          })
-        }
-      }
-    })
-    // 用户接收到 sdp answer
-    this.$store.commit('addHandler', {
-      id: 'sdpAnswer' + self.name,
-      handler: (msg) => {
-        if (self.webRtcPeer !== null) {
-          console.log('处理接收到的sdpanswer 消息')
-          self.webRtcPeer.processAnswer(msg.content, function (error) {
-            if (error) {
-              return console.error(error)
-            }
-          })
-        }
-      }
-    })
-    console.log('我执行了')
-    console.log(this.$store.state.msgDispatch)
-    // 用户收到挂断通知，销毁webrtc
-    // 注入接收到的hangup 消息处理器
-    this.$store.commit('addHandler', {
-      id: 'hangup',
-      handler: function (msg) {
-        if (self.webRtcPeer != null) {
-          console.log('销毁webrtc')
-          self.webRtcPeer.dispose()
-        }
-        self.$emit('recHangup', msg.content)
-      }
-    })
-    // 用户收到关闭直播间通知，销毁webrtc
-    // closeBroadcastRoom 消息处理器
-    this.$store.commit('addHandler', {
-      id: 'closeBroadcastRoom',
-      handler: function (msg) {
-        if (self.webRtcPeer != null) {
-          console.log('销毁webrtc')
-          self.webRtcPeer.dispose()
-        }
-        self.$emit('recCloseBroadcastRoom', msg.content)
-      }
-    })
   }
 }
 </script>

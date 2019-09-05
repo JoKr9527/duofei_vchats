@@ -19,6 +19,8 @@ const store = new Vuex.Store({
     ws: null,
     // 处于通话中
     calling: false,
+    // 通话类型 voice 1 video 2 text 4
+    callingType: 0,
     // 当前用户
     username: null,
     // 所处域id
@@ -28,13 +30,16 @@ const store = new Vuex.Store({
     // 所处box
     box: '',
     // 消息处理
-    msgDispatch: msgDispatch
+    msgDispatch: msgDispatch,
+    // 创建的 webrtc
+    webRtc: {}
   },
   mutations: {
     createCon (state, url) {
       state.ws = new WebSocket(url)
     },
     sendMsg (state, msg) {
+      console.log('sendMsg' + msg)
       state.ws.send(msg)
     },
     recMessage (state, onmessage) {
@@ -81,6 +86,23 @@ const store = new Vuex.Store({
     },
     clearMembers (state) {
       state.members = []
+    },
+    addWebRtc (state, payload) {
+      state.webRtc[payload.id] = payload.obj
+    },
+    delWebRtc (state, id) {
+      delete state.webRtc[id]
+    },
+    disposeWebRtc (state, id) {
+      console.log(id + '的webrtc准备销毁...')
+      if (state.webRtc[id] !== undefined) {
+        state.webRtc[id].dispose()
+        delete state.webRtc[id]
+        console.log(id + '的webrtc已销毁!')
+      }
+    },
+    setCallingType (state, value) {
+      state.callingType = value
     }
   }
 })

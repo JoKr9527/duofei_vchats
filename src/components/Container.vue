@@ -18,21 +18,19 @@
         </el-submenu>
       </el-menu>
     </el-aside>
-
     <el-container>
       <el-header style="text-align: left; font-size: 12px" v-bind:class="{elHeader: (this.$store.state.box === 'onetoone' && hasMembers) || this.$store.state.box === 'onetomany' || this.$store.state.box === 'manytomany'}">
         <span>
-          <user-opt v-show="this.$store.state.box === 'onetoone' && hasMembers" :callProcess="callProcess" @loadingBox="sendReqVideoCll" @hangup="hangup"></user-opt>
-          <broadcast-room-opt v-show="this.$store.state.box === 'onetomany'" @createBroadcastRoomSuccess="createBroadcastRoomSuccess" @joinBroadcastRoomSuccess="joinBroadcastRoomSuccess" :isPresenter="isPresenter"
-              @closeBroadcastRoom="closeBroadcastRoom" @quitBroadcastRoom="quitBroadcastRoom"></broadcast-room-opt>
-          <meet-room-opt v-show="this.$store.state.box === 'manytomany'" :isCreator="isCreator" @joinMeetRoomEvent="joinMeetRoomEvent" @quitMeetRoomEvent="quitMeetRoomEvent" @closeMeetRoomEvent="closeMeetRoomEvent"></meet-room-opt>
+          <user-opt v-show="this.$store.state.box === 'onetoone' && hasMembers" :callProcess="callProcess" @reqStart="loadingWaitText"></user-opt>
+          <broadcast-room-opt v-show="this.$store.state.box === 'onetomany'" :isPresenter="isPresenter"></broadcast-room-opt>
+          <meet-room-opt v-show="this.$store.state.box === 'manytomany'" :isCreator="isCreator"></meet-room-opt>
         </span>
       </el-header>
       <el-main style="width: 100%;height: 100%;">
         <div id="video_box" style="border-color: rgb(201, 186, 131)">
-          <one-to-one-box-container ref="oneToOneBox" v-show="this.$store.state.box === 'onetoone' && hasMembers" @recHangup="recHangup">
+          <one-to-one-box-container ref="oneToOneBox" v-show="this.$store.state.box === 'onetoone' && hasMembers">
           </one-to-one-box-container>
-          <one-to-many-box-container ref="oneToManyBox" v-show="this.$store.state.box === 'onetomany'" @recCloseBroadcastRoom="recCloseBroadcastRoom"></one-to-many-box-container>
+          <one-to-many-box-container ref="oneToManyBox" v-show="this.$store.state.box === 'onetomany'"></one-to-many-box-container>
           <many-to-many-box-container ref="manyToManyBox" v-show="this.$store.state.box === 'manytomany'"></many-to-many-box-container>
         </div>
       </el-main>
@@ -157,8 +155,8 @@ export default {
       this.$store.commit('addMember', called)
       this.$store.commit('setBox', 'onetoone')
     },
-    open (title, msg, to) {
-      this.$confirm(msg, title, {
+    open (title, text, to, type) {
+      this.$confirm(text, title, {
         distinguishCancelAndClose: true,
         confirmButtonText: '接受',
         cancelButtonText: '拒绝'
@@ -168,56 +166,38 @@ export default {
           message: '正在连接...'
         })
         const msg = {
-          id: 'reqVideoRepAccept',
+          id: 'callResp',
           from: this.username,
           to: to,
-          content: '对方已接受，连接建立中',
-          messageType: 'user',
-          messageProcessMode: 'redirect'
+          content: 'accept',
+          messageType: 'OneToOneMsg'
         }
         this.$store.commit('sendMsg', JSON.stringify(msg))
         // 初始化内容
         this.$store.commit('setCalling', true)
+        this.$store.commit('setCallingType', type)
         this.$store.commit('clearMembers')
         this.$store.commit('addMember', to)
         this.$store.commit('setScopeId', '')
         this.$store.commit('setBox', 'onetoone')
         this.callProcess.calledUsername = to
-        // 建立onetoone连接
-        console.log('建立一对一连接')
-        const message = {
-          id: 'call',
-          from: this.$store.state.username,
-          to: this.$store.state.members[0],
-          messageProcessMode: 'sdp_onetoone',
-          messageType: 'user'
-        }
-        this.$refs.oneToOneBox.createWebRtcPeerSendRecv(message)
       }).catch(action => {
         this.$message({
           type: 'info',
           message: action === 'cancel'
-            ? '已拒绝了通话请求'
-            : '已忽略了通话请求'
+            ? '已拒绝请求'
+            : '已忽略请求'
         })
         if (action === 'cancel') {
           const msg = {
-            id: 'reqVideoRepRefuse',
+            id: 'callResp',
             from: this.username,
             to: to,
-            content: '对方已拒绝',
-            messageType: 'user',
-            messageProcessMode: 'redirect'
+            content: 'refuse',
+            messageType: 'OneToOneMsg'
           }
           this.$store.commit('sendMsg', JSON.stringify(msg))
-          this.init()
         }
-      })
-    },
-    msgHint (type, msg) {
-      this.$message({
-        type: type,
-        message: msg
       })
     },
     loadingBox (loadingText) {
@@ -235,114 +215,16 @@ export default {
         this.loading.close()
       }, 25000)
     },
-    sendReqVideoCll () {
+    loadingWaitText () {
       this.loadingBox('等待对方应答')
-      this.$store.commit('setCalling', true)
-    },
-    hangup () {
-      this.$refs.oneToOneBox.disposeWebRtc()
-      this.init()
-    },
-    // 收到挂断请求
-    recHangup (content) {
-      console.log('收到挂断请求')
-      this.msgHint('error', content)
-      this.init()
-    },
-    createBroadcastRoomSuccess () {
-      const msg = {
-        id: 'call',
-        from: this.$store.state.username,
-        to: this.$store.state.scopeId,
-        messageProcessMode: 'sdp_onetomany',
-        messageType: 'user'
-      }
-      // 创建webrtcsendonly
-      this.$refs.oneToManyBox.createWebRtcPeerSendonly(msg)
-      this.$store.commit('setCalling', true)
     },
     // 点击具体直播间触发的事件
     calledBroadcast (broadcast) {
       this.$store.commit('setScopeId', broadcast.id)
     },
-    // 申请加入直播间
-    joinBroadcastRoomSuccess () {
-      const msg = {
-        id: 'callee',
-        from: this.$store.state.username,
-        to: this.$store.state.scopeId,
-        messageProcessMode: 'sdp_onetomany',
-        messageType: 'user'
-      }
-      // 创建webrtcsendonly
-      this.$refs.oneToManyBox.createWebRtcPeerRecvonly(msg)
-      this.$store.commit('setCalling', true)
-    },
-    // 关闭直播间触发事件
-    closeBroadcastRoom () {
-      this.$refs.oneToManyBox.disposeWebRtc()
-      // 发送直播间关闭消息
-      const msg = {
-        id: 'closeBroadcastRoom',
-        from: this.$store.state.username,
-        to: this.$store.state.scopeId,
-        content: '当前观看的直播间已关闭',
-        messageProcessMode: 'mutual',
-        messageType: 'user'
-      }
-      this.$store.commit('sendMsg', JSON.stringify(msg))
-      this.$store.commit('setCalling', false)
-      this.$store.commit('setScopeId', '')
-      this.$store.commit('clearMembers')
-    },
-    // 退出直播间触发事件
-    quitBroadcastRoom () {
-      this.$refs.oneToManyBox.disposeWebRtc()
-      // 发送直播间关闭消息
-      const msg = {
-        id: 'quitBroadcastRoom',
-        from: this.$store.state.username,
-        to: this.$store.state.scopeId,
-        content: this.$store.state.username + '退出直播间',
-        messageProcessMode: 'mutual',
-        messageType: 'user'
-      }
-      this.$store.commit('sendMsg', JSON.stringify(msg))
-      this.$store.commit('setCalling', false)
-      this.$store.commit('setScopeId', '')
-      this.$store.commit('clearMembers')
-    },
-    // 接收到关闭直播间消息时，触发的事件
-    recCloseBroadcastRoom (content) {
-      this.msgHint('error', content)
-      this.$store.commit('setCalling', false)
-      this.$store.commit('setScopeId', '')
-    },
     // 响应具体会议室的点击事件
     readyMeetRoom (scopeId) {
       this.$store.commit('setScopeId', scopeId)
-    },
-    // 点击创建会议室时，触发的事件
-    joinMeetRoomEvent () {
-      const msg = {
-        id: 'call',
-        from: this.$store.state.username,
-        to: this.$store.state.scopeId,
-        messageProcessMode: 'sdp_manytomany',
-        messageType: 'user'
-      }
-      // 创建webrtcsendonly
-      this.$refs.manyToManyBox.createWebRtcPeerSendonly(msg)
-    },
-    // 点击退出会议室时，触发的事件
-    quitMeetRoomEvent () {
-      this.$store.commit('setCalling', false)
-      this.$refs.manyToManyBox.quitMeetRoomRun()
-    },
-    // 点击关闭会议室时，触发的事件
-    closeMeetRoomEvent () {
-      this.$store.commit('setCalling', false)
-      this.$refs.manyToManyBox.closeMeetRoomRun()
     }
   },
   mounted () {
@@ -366,56 +248,187 @@ export default {
         self.onlineUsers = msg.content
       }
     })
+    // 添加可用直播间消息处理器
+    this.$store.commit('addHandler', {
+      id: 'onlineBroadcastRoom',
+      handler: (msg) => {
+        this.onlineBroadcastRooms = msg.content
+      }
+    })
+    // 添加可用会议室消息处理期
+    this.$store.commit('addHandler', {
+      id: 'onlineMeetRoom',
+      handler: (msg) => {
+        this.onlineMeetRooms = msg.content
+      }
+    })
+    // 用户接收到iceCandidate消息
+    this.$store.commit('addHandler', {
+      id: 'iceCandidate',
+      handler: (msg) => {
+        const webRtc = self.$store.state.webRtc[msg.from]
+        if (webRtc !== undefined) {
+          console.log('处理 icecandidate')
+          webRtc.addIceCandidate(msg.content, error => {
+            if (error) { return console.error('Error adding candidate: ' + error) }
+          })
+        }
+      }
+    })
+    // 用户接收到 sdp answer
+    this.$store.commit('addHandler', {
+      id: 'sdpAnswer',
+      handler: (msg) => {
+        const webRtc = self.$store.state.webRtc[msg.from]
+        if (webRtc !== undefined) {
+          console.log('处理接收到的sdpanswer 消息')
+          webRtc.processAnswer(msg.content, function (error) {
+            if (error) {
+              return console.error(error)
+            }
+          })
+        }
+      }
+    })
     // 用户收到视频请求
     this.$store.commit('addHandler', {
-      id: 'reqVideoCall',
+      id: 'call',
       handler: (msg) => {
-        self.open('视频通话', msg.content, msg.from)
-      }
-    })
-    // 用户收到接收视频请求
-    this.$store.commit('addHandler', {
-      id: 'reqVideoRepAccept',
-      handler: (msg) => {
-        self.loading.text = msg.content
-        setTimeout(() => {
-          if (self.loading !== null) {
-            self.loading.close()
-          }
-        }, 1500)
-      }
-    })
-    // 用户收到拒绝视频请求
-    this.$store.commit('addHandler', {
-      id: 'reqVideoRepRefuse',
-      handler: (msg) => {
-        self.loading.text = msg.content
-        setTimeout(() => {
-          if (self.loading !== null) {
-            self.loading.close()
-          }
-        }, 1500)
-        self.init()
-      }
-    })
-    // 用户收到请求创建webrtc
-    this.$store.commit('addHandler', {
-      id: 'callee',
-      handler: (msg) => {
-        // 建立onetoone连接
-        console.log('建立一对一连接')
-        const message = {
-          id: 'callee',
-          from: self.username,
-          to: msg.content,
-          messageProcessMode: 'sdp_onetoone',
-          messageType: 'user'
+        if (msg.content === 2 || msg.content === 3) {
+          self.open('视频通话', msg.from + ' 请求与你视频通话', msg.from, msg.content)
+        } else if (msg.content === 1) {
+          self.open('语音通话', msg.from + ' 请求与你语音通话', msg.from, msg.content)
         }
-        self.$refs.oneToOneBox.createWebRtcPeerSendRecv(message)
-        self.$store.commit('setScopeId', msg.content)
-        self.$store.commit('setCalling', true)
       }
     })
+    // 用户收到请求响应
+    this.$store.commit('addHandler', {
+      id: 'callResp',
+      handler: (msg) => {
+        if (msg.content === 'accept') {
+          self.loading.text = '对方已接受，连接建立中...'
+        } else if (msg.content === 'refuse') {
+          self.loading.text = '对方已拒绝'
+          self.$store.commit('setCalling', false)
+          this.$store.commit('clearMembers')
+        }
+        setTimeout(() => {
+          if (self.loading !== null) {
+            self.loading.close()
+          }
+        }, 1500)
+      }
+    })
+    // 用户收到一对一域id
+    this.$store.commit('addHandler', {
+      id: 'oneToOneScopeSuccess',
+      handler: (msg) => {
+        const message = {
+          id: 'sdpOffer',
+          from: self.$store.state.username,
+          to: msg.content,
+          other: self.$store.state.username,
+          messageType: 'SdpMsg'
+        }
+        const oncandidategatheringdone = function () {
+          // 开始激活域
+          const waitSendMsg = {
+            id: 'active',
+            from: self.$store.state.username,
+            to: msg.content,
+            other: self.$store.state.username,
+            messageType: 'OneToOneMsg'
+          }
+          console.log('开始激活一对一域')
+          self.$store.commit('sendMsg', JSON.stringify(waitSendMsg))
+        }
+        self.$refs.oneToOneBox.createWebRtcPeerSendRecv(message, oncandidategatheringdone)
+        self.$store.commit('setScopeId', msg.content)
+      }
+    })
+    // 用户创建一对多域成功后，收到一对多域id
+    this.$store.commit('addHandler', {
+      id: 'oneToManyScopeSuccess',
+      handler: (msg) => {
+        const message = {
+          id: 'sdpOffer',
+          from: self.$store.state.username,
+          to: msg.content,
+          other: self.$store.state.username,
+          messageType: 'SdpMsg'
+        }
+        const oncandidategatheringdone = function () {
+          // 开始激活域
+          const waitSendMsg = {
+            id: 'active',
+            from: self.$store.state.username,
+            to: msg.content,
+            other: self.$store.state.username,
+            messageType: 'OneToManyMsg'
+          }
+          console.log('开始激活一对多域')
+          self.$store.commit('sendMsg', JSON.stringify(waitSendMsg))
+        }
+        self.$refs.oneToManyBox.createWebRtcPeerSendonly(message, oncandidategatheringdone)
+        self.$store.commit('setScopeId', msg.content)
+      }
+    })
+    // 用户加入一对多域成功后，收到一对多域id
+    this.$store.commit('addHandler', {
+      id: 'joinOneToManyScopeSuccess',
+      handler: (msg) => {
+        const message = {
+          id: 'sdpOffer',
+          from: self.$store.state.username,
+          to: msg.content,
+          other: self.$store.state.username,
+          messageType: 'SdpMsg'
+        }
+        const oncandidategatheringdone = function () {
+          // 开始激活域
+          const waitSendMsg = {
+            id: 'active',
+            from: self.$store.state.username,
+            to: msg.content,
+            other: self.$store.state.username,
+            messageType: 'OneToManyMsg'
+          }
+          console.log('开始激活一对多域')
+          self.$store.commit('sendMsg', JSON.stringify(waitSendMsg))
+        }
+        self.$refs.oneToManyBox.createWebRtcPeerRecvonly(message, oncandidategatheringdone)
+        self.$store.commit('setScopeId', msg.content)
+      }
+    })
+    // 用户收到加入多对多域成功后，收到多对多域id
+    this.$store.commit('addHandler', {
+      id: 'joinManyToManyScopeSuccess',
+      handler: (msg) => {
+        const self = this
+        const message = {
+          id: 'sdpOffer',
+          from: self.$store.state.username,
+          to: self.$store.state.scopeId,
+          other: self.$store.state.username,
+          messageType: 'SdpMsg'
+        }
+        const oncandidategatheringdone = function () {
+          // 开始激活域
+          const waitSendMsg = {
+            id: 'active',
+            from: self.$store.state.username,
+            to: self.$store.state.scopeId,
+            other: self.$store.state.username,
+            messageType: 'GroupMsg'
+          }
+          console.log('开始激活一对一域')
+          self.$store.commit('sendMsg', JSON.stringify(waitSendMsg))
+        }
+        self.$refs.manyToManyBox.createWebRtcPeerSendonly(message, oncandidategatheringdone)
+        self.$store.commit('setScopeId', msg.content)
+      }
+    })
+    // next ...
     // 用户收到错误消息处理
     this.$store.commit('addHandler', {
       id: 'errorMsg',
@@ -427,34 +440,6 @@ export default {
           }
         }, 1200)
         self.init()
-      }
-    })
-    // 用户收到加入域的通知
-    this.$store.commit('addHandler', {
-      id: 'joinScope',
-      handler: (msg) => {
-        self.$store.commit('setScopeId', msg.content)
-      }
-    })
-    // 添加直播间消息处理器
-    this.$store.commit('addHandler', {
-      id: 'onlineBroadcastRoom',
-      handler: (msg) => {
-        this.onlineBroadcastRooms = msg.content
-      }
-    })
-    // 添加接收到用户退出直播间消息处理器
-    this.$store.commit('addHandler', {
-      id: 'quitBroadcastRoom',
-      handler: (msg) => {
-        self.$message(msg.content)
-      }
-    })
-    // 添加会议室消息处理期
-    this.$store.commit('addHandler', {
-      id: 'onlineMeetRoom',
-      handler: (msg) => {
-        this.onlineMeetRooms = msg.content
       }
     })
     this.$store.commit('recMessage', (evt) => {
