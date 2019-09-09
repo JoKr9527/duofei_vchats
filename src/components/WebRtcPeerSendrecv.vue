@@ -31,16 +31,20 @@ export default {
     // 创建收发对等点
     createWebRtcPeer: function (localVideo, remoteVideo, msg, oncandidategatheringdone) {
       let video = false
+      let sendSource = 'webcam'
       console.log(this.$store.state.callingType)
       if (this.$store.state.callingType === 2 || this.$store.state.callingType === 3) {
         video = {
           width: 640,
-          framerate: 15
+          framerate: 45
         }
-      } else {
+      } else if (this.$store.state.callingType === 1) {
         const img = require('../assets/voice240180.jpg')
         this.$emit('posterChange', img)
         console.log(localVideo)
+      } else if (this.$store.state.callingType === 8) {
+        video = true
+        sendSource = 'screen'
       }
       const options = {
         localVideo: localVideo,
@@ -49,9 +53,10 @@ export default {
         oncandidategatheringdone: oncandidategatheringdone,
         onerror: this.onError,
         mediaConstraints: {
-          audio: !!((this.$store.state.callingType === 1 || this.$store.state.callingType === 3)),
+          audio: !!((this.$store.state.callingType === 1 || this.$store.state.callingType === 3 || this.$store.state.callingType === 8)),
           video: video
-        }
+        },
+        sendSource: sendSource
       }
       console.log('createWebRtcPeer')
       console.log(options)
@@ -77,6 +82,11 @@ export default {
       })
     },
     createWebRtcPeerSendonly: function (localVideo, msg, oncandidategatheringdone) {
+      let sendSource = 'webcam'
+      console.log(this.$store.state.callingType)
+      if (this.$store.state.callingType === 8) {
+        sendSource = 'screen'
+      }
       const options = {
         localVideo: localVideo,
         onicecandidate: this.onIceCandidate,
@@ -88,7 +98,8 @@ export default {
             width: 640,
             framerate: 45
           }
-        }
+        },
+        sendSource: sendSource
       }
       console.log('createWebRtcPeer')
       const self = this

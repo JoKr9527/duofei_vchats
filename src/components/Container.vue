@@ -298,6 +298,8 @@ export default {
           self.open('视频通话', msg.from + ' 请求与你视频通话', msg.from, msg.content)
         } else if (msg.content === 1) {
           self.open('语音通话', msg.from + ' 请求与你语音通话', msg.from, msg.content)
+        } else if (msg.content === 8) {
+          self.open('屏幕共享', msg.from + ' 请求与你共享屏幕', msg.from, msg.content)
         }
       }
     })

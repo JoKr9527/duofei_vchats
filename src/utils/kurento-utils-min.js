@@ -29,7 +29,7 @@
     var ua = window && window.navigator ? window.navigator.userAgent : ''
     var parser = new UAParser(ua)
     var browser = parser.getBrowser()
-    /*function insertScriptSrcInHtmlDom (scriptSrc) {
+    /* function insertScriptSrcInHtmlDom (scriptSrc) {
       var script = document.createElement('script')
       script.src = scriptSrc
       var ref = document.querySelector('script')
@@ -42,7 +42,7 @@
         insertScriptSrcInHtmlDom('./utils/adapter.js')
       }
     }
-    importScriptsDependsOnBrowser()*/
+    importScriptsDependsOnBrowser() */
     var usePlanB = false
     if (browser.name === 'Chrome' || browser.name === 'Chromium') {
       logger.debug(browser.name + ': using SDP PlanB')
@@ -506,12 +506,25 @@
         if (sendSource === 'webcam') {
           getMedia(mediaConstraints)
         } else {
-          getScreenConstraints(sendSource, function (error, constraints_) {
+          // 已修改为自己实现
+          /* getScreenConstraints(sendSource, function (error, constraints_) {
             if (error) { return callback(error) }
             constraints = [mediaConstraints]
             constraints.unshift(constraints_)
             getMedia(recursive.apply(undefined, constraints))
-          }, guid)
+          }, guid) */
+          if ('getDisplayMedia' in navigator) {
+            navigator.mediaDevices.getDisplayMedia(mediaConstraints).then(stream => {
+              videoStream = stream
+              start()
+            })
+          } else {
+            /* console.error('This library is not enabled for screen sharing') */
+            navigator.mediaDevices.getDisplayMedia(mediaConstraints).then(stream => {
+              videoStream = stream
+              start()
+            })
+          }
         }
       } else {
         setTimeout(start, 0)
@@ -1225,8 +1238,15 @@
     }
   }, {}],
   10: [function (require, module, exports) {
-    // Does nothing at all.
-
+    // 2019.09.06 do display media
+    function getScreenConstraints (mediaConstraints, callback) {
+      if ('getDisplayMedia' in window.navigator) {
+        navigator.getDisplayMedia(mediaConstraints).then(callback)
+      } else {
+        console.error('This library is not enabled for screen sharing')
+      }
+    }
+    module.exports = getScreenConstraints
   }, {}],
   11: [function (require, module, exports) {
     /*!

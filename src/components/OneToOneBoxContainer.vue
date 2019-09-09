@@ -1,13 +1,15 @@
 <template>
   <div  v-if="this.$store.state.box === 'onetoone'">
     <el-row>
-      <el-col :span="4">
-        <video ref="localVideo" autoplay width="240px" height="180px"
+      <el-col :span="12">
+        <video ref="localVideo" autoplay width="720px" height="460px"
                :poster="poster"></video>
+        <el-button type="success" v-show="localVideoCan" @click="fullScreen(localVideo)" round>全屏</el-button>
       </el-col>
-      <el-col :span="4">
-        <video ref="remoteVideo" autoplay width="240px" height="180px"
+      <el-col :span="12">
+        <video ref="remoteVideo" autoplay width="720px" height="460px"
                :poster="poster"></video>
+        <el-button type="success" v-show="remoteVideoCan" @click="fullScreen(remoteVideo)" round>全屏</el-button>
       </el-col>
     </el-row>
     <web-rtc-peer-sendrecv ref="oneToOneWebRtc" :name="this.$store.state.username" @posterChange="posterChange"></web-rtc-peer-sendrecv>
@@ -25,24 +27,55 @@ export default {
     const localVideo = {}
     const remoteVideo = {}
     const poster = ''
+    const localVideoCanplay = false
+    const remoteVideoCanplay = false
     return {
       localVideo,
       remoteVideo,
-      poster
+      poster,
+      localVideoCanplay,
+      remoteVideoCanplay,
     }
   },
   computed: {
+    localVideoCan: function () {
+      return this.$store.state.calling && this.localVideoCanplay
+    },
+    remoteVideoCan: function () {
+      return this.$store.state.calling && this.remoteVideoCanplay
+    }
   },
   methods: {
     // 创建webrtc
     createWebRtcPeerSendRecv (message, oncandidategatheringdone) {
       this.localVideo = this.$refs.localVideo
       this.remoteVideo = this.$refs.remoteVideo
+      const self = this
+      this.localVideo.addEventListener('canplay', function (e) {
+        console.log('提示本地视频已准备好开始播放')
+        self.localVideoCanplay = true
+      })
+      this.remoteVideo.addEventListener('canplay', function (e) {
+        console.log('提示远程视频已准备好开始播放')
+        self.remoteVideoCanplay = true
+      })
       this.$refs.oneToOneWebRtc.createWebRtcPeer(this.localVideo, this.remoteVideo, message, oncandidategatheringdone)
     },
     posterChange (value) {
       console.log(value)
       this.poster = value
+    },
+    fullScreen (video) {
+      let videoDom = video
+      if (videoDom.requestFullscreen) {
+        videoDom.requestFullscreen()
+      } else if (videoDom.webkitRequestFullScreen) {
+        videoDom.webkitRequestFullScreen()
+      } else if (videoDom.mozRequestFullScreen) {
+        videoDom.mozRequestFullScreen()
+      } else {
+        videoDom.msRequestFullscreen()
+      }
     }
   },
   mounted () {
@@ -69,5 +102,7 @@ export default {
 </script>
 
 <style scoped>
-
+video {
+  object-fit: fill;
+}
 </style>

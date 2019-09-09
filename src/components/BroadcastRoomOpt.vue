@@ -1,6 +1,7 @@
 <template>
   <el-row>
-    <el-button type="primary" v-if="this.$store.state.scopeId === ''" @click="createBroadcastRoom" round>创建直播间</el-button>
+    <el-button type="primary" v-if="this.$store.state.scopeId === ''" @click="createBroadcastRoom(3)" round>创建摄像头直播间</el-button>
+    <el-button type="primary" v-if="this.$store.state.scopeId === ''" @click="createBroadcastRoom(8)" round>创建屏幕共享直播间</el-button>
     <el-button type="success" v-if="this.$store.state.scopeId !== '' && !this.$store.state.calling" @click="joinBroadcastRoom" round>加入直播间</el-button>
     <el-button type="danger" v-if="this.$store.state.scopeId !== '' && this.$store.state.calling && !isPresenter" @click="quitBroadcastRoom" round>退出直播间</el-button>
     <el-button type="danger" v-if="this.$store.state.scopeId !== '' && this.$store.state.calling && isPresenter" @click="closeBroadcastRoom" round>关闭直播间</el-button>
@@ -12,7 +13,7 @@ export default {
   name: 'BroadcastRoomOpt',
   props: ['isPresenter'],
   methods: {
-    createBroadcastRoom () {
+    createBroadcastRoom (callingType) {
       this.$prompt('', '请输入直播间名称', {
         confirmButtonText: '确定',
         cancelButtonText: '取消'
@@ -25,6 +26,7 @@ export default {
         }
         this.$store.commit('sendMsg', JSON.stringify(message))
         this.$store.commit('setCalling', true)
+        this.$store.commit('setCallingType', callingType)
       }).catch(() => {
         this.$message({
           type: 'info',

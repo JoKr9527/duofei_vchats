@@ -19,7 +19,7 @@ const store = new Vuex.Store({
     ws: null,
     // 处于通话中
     calling: false,
-    // 通话类型 voice 1 video 2 text 4
+    // 通话类型 voice 1 video 2 text 4 screen 8
     callingType: 0,
     // 当前用户
     username: null,
