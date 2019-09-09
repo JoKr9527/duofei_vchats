@@ -83,9 +83,13 @@ export default {
     },
     createWebRtcPeerSendonly: function (localVideo, msg, oncandidategatheringdone) {
       let sendSource = 'webcam'
-      console.log(this.$store.state.callingType)
+      let video = {
+        width: 640,
+        framerate: 45
+      }
       if (this.$store.state.callingType === 8) {
         sendSource = 'screen'
+        video = true
       }
       const options = {
         localVideo: localVideo,
@@ -94,10 +98,7 @@ export default {
         oncandidategatheringdone: oncandidategatheringdone,
         mediaConstraints: {
           audio: true,
-          video: {
-            width: 640,
-            framerate: 45
-          }
+          video: video
         },
         sendSource: sendSource
       }
@@ -131,10 +132,7 @@ export default {
         oncandidategatheringdone: oncandidategatheringdone,
         mediaConstraints: {
           audio: true,
-          video: {
-            width: 640,
-            framerate: 45
-          }
+          video: true
         }
       }
       console.log('createWebRtcPeer')
@@ -161,6 +159,15 @@ export default {
     },
     createWebRtcPeerRecvonlyBySpecialIcecandidateCallback: function (remoteVideo, msg, oncandidategatheringdone) {
       const self = this
+      let sendSource = 'webcam'
+      let video = {
+        width: 640,
+        framerate: 45
+      }
+      if (this.$store.state.callingType === 8) {
+        sendSource = 'screen'
+        video = true
+      }
       const options = {
         remoteVideo: remoteVideo,
         onicecandidate: function (candidate) {
@@ -179,11 +186,9 @@ export default {
         oncandidategatheringdone: oncandidategatheringdone,
         mediaConstraints: {
           audio: true,
-          video: {
-            width: 640,
-            framerate: 45
-          }
-        }
+          video: video
+        },
+        sendSource: sendSource
       }
       console.log('createWebRtcPeer')
       this.webRtcPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(options,

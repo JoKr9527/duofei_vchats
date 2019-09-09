@@ -1,6 +1,14 @@
 <template>
   <div>
     <el-button type="primary" v-if="this.$store.state.scopeId === ''" @click="createMeetRoom" round>创建会议室</el-button>
+    <el-select v-if="this.$store.state.scopeId !== '' && !this.$store.state.calling" v-model="value" placeholder="请选择" :value="value" @change="changeV">
+      <el-option
+        v-for="item in options"
+        :key="item.value"
+        :label="item.label"
+        :value="item.value">
+      </el-option>
+    </el-select>
     <el-button type="success" v-if="this.$store.state.scopeId !== '' && !this.$store.state.calling" @click="joinMeetRoom" round>加入会议室</el-button>
     <el-button type="danger" v-if="this.$store.state.scopeId !== '' && this.$store.state.calling " @click="quitMeetRoom" round>退出会议室</el-button>
     <el-button type="danger" v-if="this.$store.state.scopeId !== '' && this.$store.state.calling && isCreator" @click="closeMeetRoom" round>关闭会议室</el-button>
@@ -11,6 +19,19 @@
 export default {
   name: 'MeetRoomOpt',
   props: ['isCreator'],
+  data () {
+    const value = null
+    return {
+      options: [{
+        value: '3',
+        label: '摄像头'
+      }, {
+        value: '8',
+        label: '录屏'
+      }],
+      value
+    }
+  },
   methods: {
     createMeetRoom () {
       this.$prompt('', '请输入会议室名称', {
@@ -78,10 +99,14 @@ export default {
       console.log('关闭会议室')
       this.$store.commit('setCalling', false)
       this.$store.commit('clearMembers')
+    },
+    changeV (v) {
+      this.$store.commit('setCallingType', parseInt(v))
     }
   },
   mounted () {
     const self = this
+    this.$store.commit('setCallingType', 3)
     // 用户接收到创建会议室响应信息
     this.$store.commit('addHandler', {
       id: 'createMeetRoomResp',
