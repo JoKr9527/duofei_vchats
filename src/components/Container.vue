@@ -13,17 +13,22 @@
           <el-menu-item :index="broadcast.id" v-bind:key="broadcast.id" v-for="broadcast in onlineBroadcastRooms" @click="calledBroadcast(broadcast)">{{broadcast.name}}</el-menu-item>
         </el-submenu>
         <el-submenu index="3">
-          <template slot="title"><i class="el-icon-menu"></i>会议</template>
-            <el-menu-item :index="meetroom.id" v-bind:key="meetroom.id" v-for="meetroom in onlineMeetRooms" @click="readyMeetRoom(meetroom.id)">{{meetroom.name}}</el-menu-item>
+        <template slot="title"><i class="el-icon-menu"></i>会议</template>
+        <el-menu-item :index="meetroom.id" v-bind:key="meetroom.id" v-for="meetroom in onlineMeetRooms" @click="readyMeetRoom(meetroom.id)">{{meetroom.name}}</el-menu-item>
+      </el-submenu>
+        <el-submenu index="4">
+          <template slot="title"><i class="el-icon-menu"></i>多人聊天</template>
+          <el-menu-item :index="peopleRoom.id" v-bind:key="peopleRoom.id" v-for="peopleRoom in onlinePeopleRoom" @click="readyPeopleRoom(peopleRoom.id)">{{peopleRoom.name}}</el-menu-item>
         </el-submenu>
       </el-menu>
     </el-aside>
     <el-container>
-      <el-header style="text-align: left; font-size: 12px" v-bind:class="{elHeader: (this.$store.state.box === 'onetoone' && hasMembers) || this.$store.state.box === 'onetomany' || this.$store.state.box === 'manytomany'}">
+      <el-header style="text-align: left; font-size: 12px" v-bind:class="{elHeader: (this.$store.state.box === 'onetoone' && hasMembers) || this.$store.state.box === 'onetomany' || this.$store.state.box === 'manytomany' || this.$store.state.box === 'people'}">
         <span>
           <user-opt v-show="this.$store.state.box === 'onetoone' && hasMembers" :callProcess="callProcess" @reqStart="loadingWaitText"></user-opt>
           <broadcast-room-opt v-show="this.$store.state.box === 'onetomany'" :isPresenter="isPresenter"></broadcast-room-opt>
           <meet-room-opt v-show="this.$store.state.box === 'manytomany'" :isCreator="isCreator"></meet-room-opt>
+          <people-room-opt ref="peopleRoomOpt" v-show="this.$store.state.box === 'people'" :onlineUsers="onlineUsers"></people-room-opt>
         </span>
       </el-header>
       <el-main style="width: 100%;height: 100%;">
@@ -32,6 +37,7 @@
           </one-to-one-box-container>
           <one-to-many-box-container ref="oneToManyBox" v-show="this.$store.state.box === 'onetomany'"></one-to-many-box-container>
           <many-to-many-box-container ref="manyToManyBox" v-show="this.$store.state.box === 'manytomany'"></many-to-many-box-container>
+          <people-room-box-container ref="peopleBox" v-show="this.$store.state.box === 'people'"></people-room-box-container>
         </div>
       </el-main>
     </el-container>
@@ -46,8 +52,12 @@ import OneToManyBoxContainer from './OneToManyBoxContainer'
 import ManyToManyBoxContainer from './ManyToManyBoxContainer'
 import BroadcastRoomOpt from './BroadcastRoomOpt'
 import MeetRoomOpt from './MeetRoomOpt'
+import PeopleRoomOpt from './PeopleRoomOpt'
+import PeopleRoomBoxContainer from './PeopleRoomBoxContainer'
 export default {
   components: {
+    PeopleRoomBoxContainer,
+    PeopleRoomOpt,
     MeetRoomOpt,
     BroadcastRoomOpt,
     UserOpt,
@@ -68,6 +78,7 @@ export default {
       onlineUsers,
       onlineBroadcastRooms,
       onlineMeetRooms,
+      onlinePeopleRoom: [],
       username,
       callProcess,
       loading
@@ -130,6 +141,11 @@ export default {
         if (!this.$store.state.calling) {
           this.init()
         }
+      } else if (index === '4') {
+        this.$store.commit('setBox', 'people')
+        if (!this.$store.state.calling) {
+          this.init()
+        }
       }
     },
     subMenuClose: function (index) {
@@ -145,6 +161,11 @@ export default {
         }
       } else if (index === '1') {
         this.$store.commit('setBox', 'onetoone')
+        if (!this.$store.state.calling) {
+          this.init()
+        }
+      } else if (index === '4') {
+        this.$store.commit('setBox', 'people')
         if (!this.$store.state.calling) {
           this.init()
         }
@@ -224,6 +245,10 @@ export default {
     },
     // 响应具体会议室的点击事件
     readyMeetRoom (scopeId) {
+      this.$store.commit('setScopeId', scopeId)
+    },
+    // 响应具体多人聊天室的点击事件
+    readyPeopleRoom (scopeId) {
       this.$store.commit('setScopeId', scopeId)
     }
   },
@@ -423,10 +448,87 @@ export default {
             other: self.$store.state.username,
             messageType: 'GroupMsg'
           }
-          console.log('开始激活一对一域')
+          console.log('开始激活多对多域')
           self.$store.commit('sendMsg', JSON.stringify(waitSendMsg))
         }
         self.$refs.manyToManyBox.createWebRtcPeerSendonly(message, oncandidategatheringdone)
+        self.$store.commit('setScopeId', msg.content)
+      }
+    })
+    // 用户收到多人聊天视频请求
+    this.$store.commit('addHandler', {
+      id: 'inviteJoinPeopleRoom',
+      handler: (msg) => {
+        console.log(msg)
+        this.$refs.peopleRoomOpt.clearSelectOnlineUsersVisible()
+        const respMsg = {
+          id: 'respInviteJoinPeopleRoom',
+          from: this.username,
+          to: msg.other,
+          messageType: 'PeopleRoomMsg'
+        }
+        this.$confirm(msg.content.toString(), '多人通话', {
+          distinguishCancelAndClose: true,
+          confirmButtonText: '接受',
+          cancelButtonText: '拒绝'
+        }).then(() => {
+          this.$message({
+            type: 'info',
+            message: '正在连接...'
+          })
+          respMsg.content = 'accept'
+          this.$store.commit('sendMsg', JSON.stringify(respMsg))
+          // 初始化内容
+          this.$store.commit('setCalling', true)
+          this.$store.commit('setCallingType', 3)
+          this.$store.commit('clearMembers')
+          this.$store.commit('addMembers', msg.content)
+          this.$store.commit('setScopeId', '')
+          this.$store.commit('setBox', 'people')
+        }).catch(action => {
+          this.$message({
+            type: 'info',
+            message: action === 'cancel'
+              ? '已拒绝请求'
+              : '已忽略请求'
+          })
+          if (action === 'cancel') {
+            respMsg.content = 'refuse'
+            this.$store.commit('sendMsg', JSON.stringify(respMsg))
+          }
+        })
+      }
+    })
+    // 用户收到多人视频聊天域
+    this.$store.commit('addHandler', {
+      id: 'peopleRoomSuccess',
+      handler: (msg) => {
+        if (this.$store.state.scopeId === msg.content) {
+          return
+        }
+        const self = this
+        this.$store.commit('setScopeId', msg.content)
+        this.$refs.peopleRoomOpt.clearSelectOnlineUsersVisible()
+        const message = {
+          id: 'sdpOffer',
+          from: self.$store.state.username,
+          to: self.$store.state.scopeId,
+          other: self.$store.state.username,
+          messageType: 'SdpMsg'
+        }
+        const oncandidategatheringdone = function () {
+          // 开始激活域
+          const waitSendMsg = {
+            id: 'active',
+            from: self.$store.state.username,
+            to: self.$store.state.scopeId,
+            other: self.$store.state.username,
+            messageType: 'PeopleRoomMsg'
+          }
+          console.log('开始激活多人视频聊天')
+          self.$store.commit('sendMsg', JSON.stringify(waitSendMsg))
+        }
+        self.$refs.peopleBox.createWebRtcPeerSendRecv(message, oncandidategatheringdone)
         self.$store.commit('setScopeId', msg.content)
       }
     })

@@ -83,7 +83,7 @@ export default {
                 self.videoIsShow['remote' + msg.content[i]] = true
               }
             }
-            self.$refs['webRtcRecvOnly' + msg.content[i]][0].createWebRtcPeerRecvonlyBySpecialIcecandidateCallback(self.$refs['remote' + msg.content][0], message, oncandidategatheringdone)
+            self.$refs['webRtcRecvOnly' + msg.content[i]][0].createWebRtcPeerRecvonlyBySpecialIcecandidateCallback(self.$refs['remote' + msg.content[i]][0], message, oncandidategatheringdone)
           }
         })
       }

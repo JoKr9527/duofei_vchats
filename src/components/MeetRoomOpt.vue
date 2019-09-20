@@ -20,7 +20,7 @@ export default {
   name: 'MeetRoomOpt',
   props: ['isCreator'],
   data () {
-    const value = null
+    const value = '3'
     return {
       options: [{
         value: '3',
