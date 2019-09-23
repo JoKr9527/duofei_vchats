@@ -9,20 +9,38 @@
             </el-menu-item>
         </el-submenu>
         <el-submenu index="2">
-          <template slot="title"><i class="el-icon-menu"></i>直播间</template>
+          <template slot="title"><i class="el-icon-s-custom"></i>直播间</template>
           <el-menu-item :index="broadcast.id" v-bind:key="broadcast.id" v-for="broadcast in onlineBroadcastRooms" @click="calledBroadcast(broadcast)">{{broadcast.name}}</el-menu-item>
         </el-submenu>
         <el-submenu index="3">
-        <template slot="title"><i class="el-icon-menu"></i>会议</template>
+        <template slot="title"><i class="el-icon-user"></i>会议</template>
         <el-menu-item :index="meetroom.id" v-bind:key="meetroom.id" v-for="meetroom in onlineMeetRooms" @click="readyMeetRoom(meetroom.id)">{{meetroom.name}}</el-menu-item>
       </el-submenu>
         <el-submenu index="4">
-          <template slot="title"><i class="el-icon-menu"></i>多人聊天</template>
+          <template slot="title"><i class="el-icon-user-solid"></i>多人聊天</template>
           <el-menu-item :index="peopleRoom.id" v-bind:key="peopleRoom.id" v-for="peopleRoom in onlinePeopleRoom" @click="readyPeopleRoom(peopleRoom.id)">{{peopleRoom.name}}</el-menu-item>
+        </el-submenu>
+        <el-submenu index="5">
+          <template slot="title"><i class="el-icon-video-camera-solid"></i>回放</template>
         </el-submenu>
       </el-menu>
     </el-aside>
     <el-container>
+      <el-drawer
+        :visible.sync="drawer"
+        :direction="direction"
+        :before-close="handleClose">
+        <template slot="title"><i class="el-icon-hot-water">播放列表</i></template>
+        <el-row v-bind:key="file" v-for="(file) in fileList" center>
+          <u></u>
+          <el-col :span="20" center><span>{{file}}</span></el-col>
+            <el-col :span="4">
+              <el-tooltip content="播放" placement="right" effect="light">
+                <el-button icon="el-icon-video-play" @click="filePlay(file)" size="mini" circle></el-button>
+              </el-tooltip>
+              </el-col>
+        </el-row>
+      </el-drawer>
       <el-header style="text-align: left; font-size: 12px" v-bind:class="{elHeader: (this.$store.state.box === 'onetoone' && hasMembers) || this.$store.state.box === 'onetomany' || this.$store.state.box === 'manytomany' || this.$store.state.box === 'people'}">
         <span>
           <user-opt v-show="this.$store.state.box === 'onetoone' && hasMembers" :callProcess="callProcess" @reqStart="loadingWaitText"></user-opt>
@@ -40,7 +58,19 @@
           <people-room-box-container ref="peopleBox" v-show="this.$store.state.box === 'people'"></people-room-box-container>
         </div>
       </el-main>
+      <el-footer>
+        <el-tooltip content="开始录制" placement="top" v-if="this.$store.state.scopeId !== '' && this.$store.state.calling && !isRecord ">
+          <el-button icon="el-icon-video-camera" @click="startRecord" circle></el-button>
+        </el-tooltip>
+        <el-tooltip content="停止录制" placement="bottom" effect="light" v-if="this.$store.state.scopeId !== '' && this.$store.state.calling && isRecord">
+          <el-button type="danger" icon="el-icon-video-pause" @click="stopRecord" circle></el-button>
+        </el-tooltip>
+      </el-footer>
     </el-container>
+    <el-dialog @close="closeFilePlay" title="正在播放" :visible.sync="filePlayVisible">
+      <video ref="filePlayVideo" autoplay width="720px" height="460px"></video>
+    </el-dialog>
+    <web-rtc-peer-sendrecv  ref="filePlayWebRtc"></web-rtc-peer-sendrecv>
   </el-container>
 </template>
 
@@ -54,8 +84,10 @@ import BroadcastRoomOpt from './BroadcastRoomOpt'
 import MeetRoomOpt from './MeetRoomOpt'
 import PeopleRoomOpt from './PeopleRoomOpt'
 import PeopleRoomBoxContainer from './PeopleRoomBoxContainer'
+import WebRtcPeerSendrecv from './WebRtcPeerSendrecv'
 export default {
   components: {
+    WebRtcPeerSendrecv,
     PeopleRoomBoxContainer,
     PeopleRoomOpt,
     MeetRoomOpt,
@@ -81,7 +113,13 @@ export default {
       onlinePeopleRoom: [],
       username,
       callProcess,
-      loading
+      loading,
+      isRecord: false,
+      drawer: false,
+      direction: 'rtl',
+      fileList: ['111.webm', '122.mp4', '1222.webm'],
+      filePlayVisible: false,
+      filePlaying: ''
     }
   },
   computed: {
@@ -146,6 +184,16 @@ export default {
         if (!this.$store.state.calling) {
           this.init()
         }
+      } else if (index === '5') {
+        if (!this.$store.state.calling) {
+          this.drawer = true
+          const msg = {
+            id: 'reqPlayFiles',
+            from: this.$store.state.username,
+            messageType: 'RecorderMsg'
+          }
+          this.$store.commit('sendMsg', JSON.stringify(msg))
+        }
       }
     },
     subMenuClose: function (index) {
@@ -168,6 +216,16 @@ export default {
         this.$store.commit('setBox', 'people')
         if (!this.$store.state.calling) {
           this.init()
+        }
+      } else if (index === '5') {
+        if (!this.$store.state.calling) {
+          this.drawer = true
+          const msg = {
+            id: 'reqPlayFiles',
+            from: this.$store.state.username,
+            messageType: 'RecorderMsg'
+          }
+          this.$store.commit('sendMsg', JSON.stringify(msg))
         }
       }
     },
@@ -250,6 +308,70 @@ export default {
     // 响应具体多人聊天室的点击事件
     readyPeopleRoom (scopeId) {
       this.$store.commit('setScopeId', scopeId)
+    },
+    startRecord () {
+      this.isRecord = true
+      const self = this
+      // 发送录制消息
+      const msg = {
+        id: 'startRecord',
+        from: self.$store.state.username,
+        to: self.$store.state.scopeId,
+        messageType: 'RecorderMsg'
+      }
+      this.$store.commit('sendMsg', JSON.stringify(msg))
+    },
+    stopRecord () {
+      this.isRecord = false
+      const self = this
+      // 发送停止录制消息
+      // 发送录制消息
+      const msg = {
+        id: 'stopRecord',
+        from: self.$store.state.username,
+        to: self.$store.state.scopeId,
+        messageType: 'RecorderMsg'
+      }
+      this.$store.commit('sendMsg', JSON.stringify(msg))
+    },
+    handleClose () {
+      this.drawer = false
+    },
+    filePlay (file) {
+      console.log(file)
+      this.drawer = false
+      this.filePlayVisible = true
+      this.$nextTick(() => {
+        const self = this
+        const message = {
+          id: 'sdpOffer',
+          from: this.$store.state.username,
+          to: file,
+          other: this.$store.state.username + file,
+          messageType: 'SdpMsg'
+        }
+        self.filePlaying = message.other
+        const oncandidategatheringdone = function () {
+          // 发送播放请求
+          const msg = {
+            id: 'playFile',
+            from: self.$store.state.username,
+            content: file,
+            messageType: 'RecorderMsg'
+          }
+          self.$store.commit('sendMsg', JSON.stringify(msg))
+          console.log('发送播放请求')
+        }
+        const filePlayVideo = self.$refs.filePlayVideo
+        console.log(filePlayVideo)
+        filePlayVideo.addEventListener('canplay', function (e) {
+          console.log('文件视频已准备好开始播放')
+        })
+        self.$refs.filePlayWebRtc.createWebRtcPeerRecvonlyBySpecialIcecandidateCallback(filePlayVideo, message, oncandidategatheringdone)
+      })
+    },
+    closeFilePlay () {
+      this.$store.commit('disposeWebRtc', this.filePlaying)
     }
   },
   mounted () {
@@ -532,11 +654,19 @@ export default {
         self.$store.commit('setScopeId', msg.content)
       }
     })
+    // 可播放文件列表
+    this.$store.commit('addHandler', {
+      id: 'playFiles',
+      handler: (msg) => {
+        this.fileList = msg.content
+      }
+    })
     // next ...
     // 用户收到错误消息处理
     this.$store.commit('addHandler', {
       id: 'errorMsg',
       handler: (msg) => {
+        const self = this
         self.loading.text = msg.content
         setTimeout(() => {
           if (self.loading !== null) {
@@ -553,7 +683,6 @@ export default {
       this.$store.commit('handleMsg', msg)
     })
   }
-
 }
 </script>
 
@@ -563,8 +692,13 @@ export default {
     color: #333;
     line-height: 60px;
   }
-
   .el-aside {
     color: #333;
+  }
+  .el-row {
+    margin-left: 20px;margin-bottom: 20px;
+  }
+  .bg-purple-light {
+    background: #e5e9f2;
   }
 </style>
