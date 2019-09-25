@@ -37,7 +37,6 @@ export default {
   },
   computed: {
     isCalling: function (e) {
-      console.log(e)
       return this.$store.state.calling
     }
   },

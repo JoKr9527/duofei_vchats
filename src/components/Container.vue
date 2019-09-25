@@ -3,7 +3,7 @@
     <el-aside width="200px" style="background-color: rgb(137, 190, 178)" class="el-aside" >
       <el-menu v-on:open="subMenuOpen" v-on:close="subMenuClose" active-text-color="#6699CC" :default-active="activeScopeId" background-color="#89BEB2" unique-opened>
         <el-submenu index="1">
-          <template slot="title"><i class="el-icon-message"></i>在线用户</template>
+          <template slot="title"><i class="el-icon-user"></i>在线用户</template>
             <el-menu-item :index="onlineUser" v-bind:key="onlineUser" v-for="onlineUser in onlineUsers" @click="calledStart(onlineUser)">
               {{onlineUser}}
             </el-menu-item>
@@ -13,12 +13,12 @@
           <el-menu-item :index="broadcast.id" v-bind:key="broadcast.id" v-for="broadcast in onlineBroadcastRooms" @click="calledBroadcast(broadcast)">{{broadcast.name}}</el-menu-item>
         </el-submenu>
         <el-submenu index="3">
-        <template slot="title"><i class="el-icon-user"></i>会议</template>
+        <template slot="title"><i class="el-icon-goods"></i>会议</template>
         <el-menu-item :index="meetroom.id" v-bind:key="meetroom.id" v-for="meetroom in onlineMeetRooms" @click="readyMeetRoom(meetroom.id)">{{meetroom.name}}</el-menu-item>
       </el-submenu>
         <el-submenu index="4">
           <template slot="title"><i class="el-icon-user-solid"></i>多人聊天</template>
-          <el-menu-item :index="peopleRoom.id" v-bind:key="peopleRoom.id" v-for="peopleRoom in onlinePeopleRoom" @click="readyPeopleRoom(peopleRoom.id)">{{peopleRoom.name}}</el-menu-item>
+          <el-menu-item :index="peopleRoom" v-bind:key="peopleRoom" v-for="peopleRoom in onlinePeopleRoom" @click="readyPeopleRoom(peopleRoom)">{{peopleRoom}}</el-menu-item>
         </el-submenu>
         <el-submenu index="5">
           <template slot="title"><i class="el-icon-video-camera-solid"></i>回放</template>
@@ -117,9 +117,12 @@ export default {
       isRecord: false,
       drawer: false,
       direction: 'rtl',
-      fileList: ['111.webm', '122.mp4', '1222.webm'],
+      fileList: [],
       filePlayVisible: false,
-      filePlaying: ''
+      filePlaying: '',
+      isVideoRepository: false,
+      uploadFileAction: 'https://192.168.3.213:28644/111',
+      videoRepos: ['大侠.mp4', '小侠.mp4', '都挺好.mp4']
     }
   },
   computed: {
@@ -165,32 +168,38 @@ export default {
     },
     subMenuOpen: function (index) {
       if (index === '2') {
+        this.isVideoRepository = false
         this.$store.commit('setBox', 'onetomany')
         if (!this.$store.state.calling) {
           this.$store.commit('setScopeId', '')
         }
       } else if (index === '3') {
+        this.isVideoRepository = false
         this.$store.commit('setBox', 'manytomany')
         if (!this.$store.state.calling) {
           this.$store.commit('setScopeId', '')
         }
       } else if (index === '1') {
+        this.isVideoRepository = false
         this.$store.commit('setBox', 'onetoone')
         if (!this.$store.state.calling) {
           this.init()
         }
       } else if (index === '4') {
+        this.isVideoRepository = false
         this.$store.commit('setBox', 'people')
         if (!this.$store.state.calling) {
           this.init()
         }
       } else if (index === '5') {
+        this.isVideoRepository = false
         if (!this.$store.state.calling) {
           this.drawer = true
+          this.$store.commit('setBox', '')
           const msg = {
             id: 'reqPlayFiles',
             from: this.$store.state.username,
-            messageType: 'RecorderMsg'
+            messageType: 'RecordMsg'
           }
           this.$store.commit('sendMsg', JSON.stringify(msg))
         }
@@ -198,32 +207,38 @@ export default {
     },
     subMenuClose: function (index) {
       if (index === '2') {
+        this.isVideoRepository = false
         this.$store.commit('setBox', 'onetomany')
         if (!this.$store.state.calling) {
           this.$store.commit('setScopeId', '')
         }
       } else if (index === '3') {
+        this.isVideoRepository = false
         this.$store.commit('setBox', 'manytomany')
         if (!this.$store.state.calling) {
           this.$store.commit('setScopeId', '')
         }
       } else if (index === '1') {
+        this.isVideoRepository = false
         this.$store.commit('setBox', 'onetoone')
         if (!this.$store.state.calling) {
           this.init()
         }
       } else if (index === '4') {
+        this.isVideoRepository = false
         this.$store.commit('setBox', 'people')
         if (!this.$store.state.calling) {
           this.init()
         }
       } else if (index === '5') {
+        this.isVideoRepository = false
         if (!this.$store.state.calling) {
           this.drawer = true
+          this.$store.commit('setBox', '')
           const msg = {
             id: 'reqPlayFiles',
             from: this.$store.state.username,
-            messageType: 'RecorderMsg'
+            messageType: 'RecordMsg'
           }
           this.$store.commit('sendMsg', JSON.stringify(msg))
         }
@@ -317,7 +332,7 @@ export default {
         id: 'startRecord',
         from: self.$store.state.username,
         to: self.$store.state.scopeId,
-        messageType: 'RecorderMsg'
+        messageType: 'RecordMsg'
       }
       this.$store.commit('sendMsg', JSON.stringify(msg))
     },
@@ -330,7 +345,7 @@ export default {
         id: 'stopRecord',
         from: self.$store.state.username,
         to: self.$store.state.scopeId,
-        messageType: 'RecorderMsg'
+        messageType: 'RecordMsg'
       }
       this.$store.commit('sendMsg', JSON.stringify(msg))
     },
@@ -338,7 +353,6 @@ export default {
       this.drawer = false
     },
     filePlay (file) {
-      console.log(file)
       this.drawer = false
       this.filePlayVisible = true
       this.$nextTick(() => {
@@ -357,13 +371,13 @@ export default {
             id: 'playFile',
             from: self.$store.state.username,
             content: file,
-            messageType: 'RecorderMsg'
+            messageType: 'RecordMsg'
           }
           self.$store.commit('sendMsg', JSON.stringify(msg))
           console.log('发送播放请求')
         }
         const filePlayVideo = self.$refs.filePlayVideo
-        console.log(filePlayVideo)
+        filePlayVideo.src = ''
         filePlayVideo.addEventListener('canplay', function (e) {
           console.log('文件视频已准备好开始播放')
         })
@@ -407,6 +421,21 @@ export default {
       id: 'onlineMeetRoom',
       handler: (msg) => {
         this.onlineMeetRooms = msg.content
+      }
+    })
+    // 添加可用多人聊天
+    this.$store.commit('addHandler', {
+      id: 'onlinePeopleRoom',
+      handler: (msg) => {
+        this.onlinePeopleRoom.push(msg.content)
+      }
+    })
+    // 添加移除多人聊天消息处理器
+    this.$store.commit('addHandler', {
+      id: 'removeOnlinePeopleRoom',
+      handler: (msg) => {
+        const index = this.onlinePeopleRoom.indexOf(msg.content)
+        this.onlinePeopleRoom.splice(index, 1)
       }
     })
     // 用户接收到iceCandidate消息
@@ -625,9 +654,9 @@ export default {
     this.$store.commit('addHandler', {
       id: 'peopleRoomSuccess',
       handler: (msg) => {
-        if (this.$store.state.scopeId === msg.content) {
+        /* if (this.$store.state.scopeId === msg.content) {
           return
-        }
+        } */
         const self = this
         this.$store.commit('setScopeId', msg.content)
         this.$refs.peopleRoomOpt.clearSelectOnlineUsersVisible()
@@ -650,8 +679,9 @@ export default {
           console.log('开始激活多人视频聊天')
           self.$store.commit('sendMsg', JSON.stringify(waitSendMsg))
         }
-        self.$refs.peopleBox.createWebRtcPeerSendRecv(message, oncandidategatheringdone)
         self.$store.commit('setScopeId', msg.content)
+        self.$store.commit('setCalling', true)
+        self.$refs.peopleBox.createWebRtcPeerSendRecv(message, oncandidategatheringdone)
       }
     })
     // 可播放文件列表

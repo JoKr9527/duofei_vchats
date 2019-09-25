@@ -23,8 +23,8 @@
           <el-button type="primary" round @click="sendInvitePeople">邀请</el-button>
         </span>
     </el-dialog>
-    <el-button type="success" v-if="this.$store.state.scopeId !== '' && !this.$store.state.calling" round>加入多人聊天</el-button>
-    <el-button type="danger" v-if="this.$store.state.scopeId !== '' && this.$store.state.calling " round>退出多人聊天</el-button>
+    <el-button type="success" v-if="this.$store.state.scopeId !== '' && !this.$store.state.calling" @click="joinPeople" round>加入多人聊天</el-button>
+    <el-button type="danger" v-if="this.$store.state.scopeId !== '' && this.$store.state.calling " @click="quitPeople" round>退出多人聊天</el-button>
   </div>
 </template>
 
@@ -48,13 +48,13 @@ export default {
     }
   },
   watch: {
-    onlineUsers: {
+    /* onlineUsers: {
       handler (newValue, oldValue) {
         console.log('new Value' + newValue)
         console.log('old Value' + oldValue)
       },
       deep: true
-    }
+    } */
   },
   methods: {
     invitePeople () {
@@ -75,7 +75,43 @@ export default {
         messageType: 'PeopleRoomMsg'
       }
       this.$store.commit('sendMsg', JSON.stringify(message))
+    },
+    joinPeople () {
+      const message = {
+        id: 'joinPeopleRoom',
+        from: this.$store.state.username,
+        to: this.$store.state.scopeId,
+        messageType: 'PeopleRoomMsg'
+      }
+      this.$store.commit('sendMsg', JSON.stringify(message))
+      this.$store.commit('setCalling', true)
+    },
+    quitPeople () {
+      const message = {
+        id: 'quitPeopleRoom',
+        from: this.$store.state.username,
+        to: this.$store.state.scopeId,
+        messageType: 'PeopleRoomMsg'
+      }
+      this.$store.commit('sendMsg', JSON.stringify(message))
+      this.$store.commit('setCalling', false)
+      this.$store.commit('clearMembers')
+      this.$store.commit('setScopeId', '')
+      this.$store.commit('disposeWebRtc', this.$store.state.username)
     }
+  },
+  mounted () {
+    // 用户收到多人聊天室关闭
+    this.$store.commit('addHandler', {
+      id: 'peopleRoomClosed',
+      handler: (msg) => {
+        const self = this
+        this.$store.commit('setCalling', false)
+        this.$store.commit('clearMembers')
+        this.$store.commit('setScopeId', '')
+        self.$store.commit('disposeWebRtc', this.$store.state.username)
+      }
+    })
   }
 }
 </script>

@@ -9,7 +9,8 @@ export default {
   data: function () {
     const webRtcPeer = null
     return {
-      webRtcPeer
+      webRtcPeer,
+      configuration: [{'urls': 'stun:173.194.66.127:19302'}, {'urls': 'stun:54.172.47.69:3478'}, {'urls': 'stun:208.97.25.20:3478'}]
     }
   },
   methods: {
@@ -32,7 +33,6 @@ export default {
     createWebRtcPeer: function (localVideo, remoteVideo, msg, oncandidategatheringdone) {
       let video = false
       let sendSource = 'webcam'
-      console.log(this.$store.state.callingType)
       if (this.$store.state.callingType === 2 || this.$store.state.callingType === 3) {
         video = {
           width: 640,
@@ -100,7 +100,8 @@ export default {
           audio: true,
           video: video
         },
-        sendSource: sendSource
+        sendSource: sendSource,
+        configuration: this.configuration
       }
       console.log('createWebRtcPeer')
       const self = this
@@ -133,7 +134,8 @@ export default {
         mediaConstraints: {
           audio: true,
           video: true
-        }
+        },
+        configuration: this.configuration
       }
       console.log('createWebRtcPeer')
       const self = this
@@ -159,15 +161,6 @@ export default {
     },
     createWebRtcPeerRecvonlyBySpecialIcecandidateCallback: function (remoteVideo, msg, oncandidategatheringdone) {
       const self = this
-      let sendSource = 'webcam'
-      let video = {
-        width: 640,
-        framerate: 45
-      }
-      if (this.$store.state.callingType === 8) {
-        sendSource = 'screen'
-        video = true
-      }
       const options = {
         remoteVideo: remoteVideo,
         onicecandidate: function (candidate) {
@@ -186,9 +179,8 @@ export default {
         oncandidategatheringdone: oncandidategatheringdone,
         mediaConstraints: {
           audio: true,
-          video: video
-        },
-        sendSource: sendSource
+          video: true
+        }
       }
       console.log('createWebRtcPeer')
       this.webRtcPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(options,

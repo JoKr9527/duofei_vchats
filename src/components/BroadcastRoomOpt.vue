@@ -12,6 +12,11 @@
 export default {
   name: 'BroadcastRoomOpt',
   props: ['isPresenter'],
+  data () {
+    return {
+      dialogTableVisible: false
+    }
+  },
   methods: {
     createBroadcastRoom (callingType) {
       this.$prompt('', '请输入直播间名称', {

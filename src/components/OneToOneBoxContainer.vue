@@ -1,39 +1,15 @@
 <template>
   <div  v-if="this.$store.state.box === 'onetoone'">
     <el-row>
-      <el-col :span="8">
+      <el-col :span="12">
         <video ref="localVideo" autoplay width="720px" height="460px"
                :poster="poster"></video>
         <el-button type="success" v-show="localVideoCan" @click="fullScreen(localVideo)" round>全屏</el-button>
       </el-col>
-      <el-col :span="8">
+      <el-col :span="12">
         <video ref="remoteVideo" autoplay width="720px" height="460px"
                :poster="poster"></video>
         <el-button type="success" v-show="remoteVideoCan" @click="fullScreen(remoteVideo)" round>全屏</el-button>
-      </el-col>
-      <el-col :span="8">
-        <el-row>
-          <wxChat
-            :data="wxChatData"
-            :showShade="false"
-            contactNickname="二哈"
-            :ownerAvatarUrl="ownerAvatarUrl"
-            :contactAvatarUrl="contactAvatarUrl" v-if="this.$store.state.dataChannels" ref="wxChat">
-          </wxChat>
-        </el-row>
-        <el-row style="margin-top: 15px">
-          <el-col :span="20">
-            <el-input
-              type="textarea"
-              :autosize="{ minRows: 2, maxRows: 4}"
-              placeholder="请输入内容"
-              v-model="text">
-            </el-input>
-          </el-col>
-          <el-col :span="2" :offset=2>
-            <el-button type="success" icon="el-icon-check" circle style="margin-top: 30%" @click="sendText"></el-button>
-          </el-col>
-        </el-row>
       </el-col>
     </el-row>
     <web-rtc-peer-sendrecv ref="oneToOneWebRtc" :name="this.$store.state.username" @posterChange="posterChange"></web-rtc-peer-sendrecv>
@@ -42,12 +18,10 @@
 
 <script>
 import WebRtcPeerSendrecv from './WebRtcPeerSendrecv'
-import wxChat from './thirdComp/wxChat'
 export default {
   name: 'OneToOneBoxContainer',
   components: {
-    WebRtcPeerSendrecv,
-    wxChat
+    WebRtcPeerSendrecv
   },
   data: function () {
     const localVideo = {}
